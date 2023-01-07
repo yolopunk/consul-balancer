@@ -68,7 +68,7 @@ export class ConsulBalancer {
       id: this.serviceRegisterId,
       name: this.options.discovery.serviceName,
       address: this.address,
-      port: this.options.port,
+      port: this.options.discovery.servicePort,
       tags: [this.options.discovery.serviceName],
       check,
     } as never)
