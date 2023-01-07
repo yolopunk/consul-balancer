@@ -2,7 +2,7 @@ import * as os from 'os'
 import Consul from 'consul'
 import * as urllib from 'urllib'
 import { defaults, omit, sample, set } from './utils/lodash'
-import type { ConsulOptions, Service } from './types'
+import type { CheckOptions, ConsulOptions, Service } from './types'
 
 export class ConsulBalancer {
   private options: ConsulOptions
@@ -51,26 +51,32 @@ export class ConsulBalancer {
   }
 
   register() {
+    const check: CheckOptions = {
+      interval: '15s',
+      timeout: '10s',
+      ttl: '60s',
+      deregistercriticalserviceafter: '5m',
+    }
+
+    if (this.options.discovery.healthCheckHTTP) {
+      check.http = `http://${this.address}:${this.options.discovery.servicePort}${this.options.discovery.healthCheckHTTP}`
+    } else {
+      check.tcp = `${this.address}:${this.options.discovery.servicePort}`
+    }
+
     return this.getConsulInstance().agent.service.register({
       id: this.serviceRegisterId,
       name: this.options.discovery.serviceName,
       address: this.address,
       port: this.options.port,
       tags: [this.options.discovery.serviceName],
-      check: {
-        http: `http://${this.address}:${this.options.discovery.servicePort}${this.options.discovery.healthCheckHTTP}`,
-        tcp: `${this.address}:${this.options.discovery.servicePort}`,
-        interval: '15s',
-        timeout: '10s',
-        ttl: '60s',
-        deregistercriticalserviceafter: '5m',
-      },
+      check,
     } as never)
   }
 
   deregister() {
     return this.getConsulInstance().agent.service.deregister(
-      this.getServiceRegisterId()
+      this.serviceRegisterId
     )
   }
 
