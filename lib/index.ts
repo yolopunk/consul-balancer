@@ -8,10 +8,13 @@ export class ConsulBalancer {
   private options: ConsulOptions
   private address: string
   private serviceRegisterId: string
-  private cachedServices: Map<string, { cacheTime: number, services: Service[] }> = new Map()
+  private cachedServices: Map<
+    string,
+    { cacheTime: number; services: Service[] }
+  > = new Map()
 
   private conculInstance: Consul.Consul | null = null
-  
+
   private static defaultOptions: ConsulOptions = {
     host: '127.0.0.1',
     port: 8500,
@@ -21,8 +24,8 @@ export class ConsulBalancer {
       register: true,
       deregister: true,
       serviceName: '',
-      servicePort: 8080
-    }
+      servicePort: 8080,
+    },
   }
 
   constructor(port: number, host: string, options: ConsulOptions)
@@ -60,16 +63,22 @@ export class ConsulBalancer {
         interval: '15s',
         timeout: '10s',
         ttl: '60s',
-        deregistercriticalserviceafter: '5m'
-      }
+        deregistercriticalserviceafter: '5m',
+      },
     } as never)
   }
 
   deregister() {
-    return this.getConsulInstance().agent.service.deregister(this.getServiceRegisterId())
+    return this.getConsulInstance().agent.service.deregister(
+      this.getServiceRegisterId()
+    )
   }
 
-  async rest(serviceName: string, pathName: string, options: urllib.RequestOptions2 = {}) {
+  async rest(
+    serviceName: string,
+    pathName: string,
+    options: urllib.RequestOptions2 = {}
+  ) {
     const service = await this.getPassingServiceByRandom(serviceName)
     if (!service) throw new Error(`${serviceName} 服务不可用`)
 
@@ -87,7 +96,9 @@ export class ConsulBalancer {
     return urllib.curl(href, { ...defaultOptions, ...options })
   }
 
-  async getPassingServiceByRandom(serviceName = this.options.discovery.serviceName) {
+  async getPassingServiceByRandom(
+    serviceName = this.options.discovery.serviceName
+  ) {
     let services = await this.getServiceListFromConsul(serviceName)
 
     if (!services.length) {
@@ -104,17 +115,21 @@ export class ConsulBalancer {
   }
 
   private async getServiceListFromConsul(serviceName: string, passing = true) {
-    const serviceList = await this.getConsulInstance().health.service({
+    const serviceList = (await this.getConsulInstance().health.service({
       service: serviceName,
-      passing
-    }) as Array<{ Node: { Node: string }; Service: { Address: string; Port: number }; Checks: { ServiceName: string; Status: string }[] }>
+      passing,
+    })) as Array<{
+      Node: { Node: string }
+      Service: { Address: string; Port: number }
+      Checks: { ServiceName: string; Status: string }[]
+    }>
 
-    const services = (serviceList ?? []).map(service => {
+    const services = (serviceList ?? []).map((service) => {
       const result = {
         node: service.Node.Node,
         address: service.Service.Address,
         port: service.Service.Port,
-        status: ''
+        status: '',
       }
 
       service.Checks.some((check: { ServiceName: string; Status: string }) => {
@@ -132,7 +147,7 @@ export class ConsulBalancer {
     if (services.length) {
       this.cachedServices.set(this.options.discovery.serviceName, {
         services,
-        cacheTime: Date.now()
+        cacheTime: Date.now(),
       })
     }
 
@@ -169,7 +184,11 @@ export class ConsulBalancer {
   }
 
   private getServiceRegisterId() {
-    return [this.options.discovery.serviceName, this.address, this.options.discovery.servicePort].join('-')
+    return [
+      this.options.discovery.serviceName,
+      this.address,
+      this.options.discovery.servicePort,
+    ].join('-')
   }
 
   private findFirstNonLoopbackHostInfo() {

@@ -11,7 +11,7 @@ const consulBalancer = new ConsulBalancer({
     serviceName: 'consul-balancer',
     servicePort: 8080,
     healthCheckHTTP: '/healthy',
-  }
+  },
 })
 
 it('get service info', async () => {
@@ -19,7 +19,7 @@ it('get service info', async () => {
   expect(service).toBeInstanceOf(Object)
 })
 
-it('registe service', async() => {
+it('registe service', async () => {
   const res = await consulBalancer.register()
   console.log(res)
 })
