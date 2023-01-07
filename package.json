@@ -51,7 +51,7 @@
     "lodash.omit": "^4.5.0",
     "lodash.sample": "^4.2.1",
     "lodash.set": "^4.3.2",
-    "urllib": "^3.10.0"
+    "urllib": "^2.40.0"
   },
   "prettier": {
     "tabWidth": 2,
