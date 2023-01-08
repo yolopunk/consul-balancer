@@ -12,6 +12,7 @@
     "lint": "eslint --ext .ts ./lib",
     "format": "prettier --write \"{,!(node_modules)/**/}*.{js,ts}\"",
     "format-check": "prettier --check \"{,!(node_modules)/**/}*.{js,ts}\"",
+    "prepublishOnly": "npm run build",
     "build": "rm -rf built && tsc"
   },
   "repository": {
