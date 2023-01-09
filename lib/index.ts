@@ -92,7 +92,7 @@ export class ConsulBalancer {
 
     const defaultOptions: urllib.RequestOptions2 = { dataType: 'json' }
     if (!options?.headers?.['content-type']) {
-      set(options, ['headers', 'content-type'], 'application/son')
+      set(options, ['headers', 'content-type'], 'application/json')
     }
 
     const { href } = new URL(pathName, `http://${address}:${port}`)
