@@ -1,7 +1,7 @@
 import { ConsulBalancer } from '../lib'
 
 const consulBalancer = new ConsulBalancer({
-  host: 'x.x.x.x',
+  host: '10.20.178.234',
   port: 8500,
   secure: false,
   discovery: {
@@ -19,8 +19,8 @@ it('get service info', async () => {
   expect(service).toBeInstanceOf(Object)
 })
 
-it('registe service', async () => {
-  const res = await consulBalancer.register()
+it('manual register service', async () => {
+  const res = await consulBalancer.register({ id: 'manul-register1', name: 'manual-register', meta: { prefix: '/api' } })
   console.log(res)
 })
 

@@ -1,6 +1,6 @@
 {
   "name": "consul-balancer",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "consul service discovery and balancing",
   "main": "built/index.js",
   "types": "built/index.d.ts",

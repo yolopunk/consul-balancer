@@ -2,7 +2,7 @@ import * as os from 'os'
 import Consul from 'consul'
 import * as urllib from 'urllib'
 import { defaults, omit, sample, set } from './utils/lodash'
-import type { CheckOptions, ConsulOptions, Service } from './types'
+import type { CheckOptions, ConsulOptions, RegisterOptions, Service } from './types'
 
 export class ConsulBalancer {
   private options: ConsulOptions
@@ -21,8 +21,8 @@ export class ConsulBalancer {
     secure: false,
     discovery: {
       enable: true,
-      register: true,
-      deregister: true,
+      register: true, // auto register discovery service
+      deregister: true, // auto register discovery service after process exited
       serviceName: '',
       servicePort: 8080,
     },
@@ -39,9 +39,12 @@ export class ConsulBalancer {
     this.options = this.parseOptions(arg1, arg2, arg3)
     this.address = this.findFirstNonLoopbackHostInfo()
     this.serviceRegisterId = this.getServiceRegisterId()
+    if (this.options.discovery.register) {
+      this.register()
+    }
   }
 
-  private getConsulInstance() {
+  getConsulInstance() {
     if (!this.conculInstance) {
       const consulOptions = omit(this.options, 'discovery') as never
       this.conculInstance = new Consul(consulOptions)
@@ -50,7 +53,8 @@ export class ConsulBalancer {
     return this.conculInstance
   }
 
-  register() {
+  // default register discovery service
+  register(options?: RegisterOptions) {
     const check: CheckOptions = {
       interval: '15s',
       timeout: '10s',
@@ -64,19 +68,20 @@ export class ConsulBalancer {
       check.tcp = `${this.address}:${this.options.discovery.servicePort}`
     }
 
-    return this.getConsulInstance().agent.service.register({
+    return this.getConsulInstance().agent.service.register(defaults(options, {
       id: this.serviceRegisterId,
       name: this.options.discovery.serviceName,
       address: this.address,
       port: this.options.discovery.servicePort,
       tags: [this.options.discovery.serviceName],
       check,
-    } as never)
+    }) as never)
   }
 
-  deregister() {
+  // default deregister discovery service
+  deregister(serviceId?: string) {
     return this.getConsulInstance().agent.service.deregister(
-      this.serviceRegisterId
+      serviceId ?? this.serviceRegisterId
     )
   }
 

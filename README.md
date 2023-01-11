@@ -9,7 +9,7 @@ npm install consul-balancer
 ```
 
 ```js
-import { ConsulBalancer } from "consul-balancer";
+import { ConsulBalancer } from "consul-balancer"
 
 const consulBalancer = new ConsulBalancer({
   host: "x.x.x.x",
@@ -17,18 +17,19 @@ const consulBalancer = new ConsulBalancer({
   secure: false,
   discovery: {
     enable: true,
-    register: true,
-    deregister: true,
+    register: true, // auto register discovery service
+    deregister: true, // auto register discovery service after process exited
     serviceName: "consul-balancer",
     servicePort: 8080,
     healthCheckHTTP: "/healthy",
   },
-});
+})
 ```
 
 ## API
 
+- `consulBalancer.getConsulInstance()`: get the consul client instance
 - `consulBalancer.getPassingServiceByRandom(serviceName)`: get the info of passing service by random
-- `consulBalancer.register()`: registers the discovery service
-- `consulBalancer.deregister()`: deregister the discovery service
+- `consulBalancer.register(options?: RegisterOptions)`: registers the discovery service
+- `consulBalancer.deregister(serviceId?: string)`: deregister the discovery service
 - `consulBalancer.rest(serviceName, pathName, urlOptions)`: [async function] load balance http utils
