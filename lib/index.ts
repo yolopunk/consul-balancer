@@ -54,7 +54,7 @@ export class ConsulBalancer {
   }
 
   // default register discovery service
-  register(options?: RegisterOptions) {
+  async register(options?: RegisterOptions) {
     const check: CheckOptions = {
       interval: '15s',
       timeout: '10s',
@@ -68,14 +68,19 @@ export class ConsulBalancer {
       check.tcp = `${this.address}:${this.options.discovery.servicePort}`
     }
 
-    return this.getConsulInstance().agent.service.register(defaults(options, {
-      id: this.serviceRegisterId,
-      name: this.options.discovery.serviceName,
-      address: this.address,
-      port: this.options.discovery.servicePort,
-      tags: [this.options.discovery.serviceName],
-      check,
-    }) as never)
+    try {
+      return await this.getConsulInstance().agent.service.register(defaults(options, {
+        id: this.serviceRegisterId,
+        name: this.options.discovery.serviceName,
+        address: this.address,
+        port: this.options.discovery.servicePort,
+        tags: [this.options.discovery.serviceName],
+        check,
+      }) as never)
+    } catch (e) {
+      console.error(`[${new Date()}] consul-balancer register ${e}`)
+      throw e
+    }
   }
 
   // default deregister discovery service
