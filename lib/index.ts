@@ -128,6 +128,8 @@ export class ConsulBalancer {
       grpc.credentials.createInsecure()
     ) as any
 
+    console.log(`[${new Date()}] consul-balancer grpc ~ ${target.serviceName}#${method}`)
+
     return new Promise((ok, fail) => {
       grpcClient[method](data, (err: Error | null, result: unknown) => {
         if (err) return fail(err)
