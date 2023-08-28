@@ -1,6 +1,7 @@
 import * as os from 'os'
 import Consul from 'consul'
 import * as urllib from 'urllib'
+import * as grpc from '@grpc/grpc-js'
 import { defaults, omit, sample, set } from './utils/lodash'
 import type { CheckOptions, ConsulOptions, RegisterOptions, Service } from './types'
 
@@ -21,11 +22,11 @@ export class ConsulBalancer {
     secure: false,
     discovery: {
       enable: true,
-      register: true, // auto register discovery service
+      register: false, // auto register discovery service
       deregister: true, // auto register discovery service after process exited
       serviceName: '',
       servicePort: 8080,
-    },
+    }
   }
 
   constructor(port: number, host: string, options: ConsulOptions)
@@ -54,7 +55,7 @@ export class ConsulBalancer {
   }
 
   // default register discovery service
-  async register(options?: RegisterOptions) {
+  async register(options: RegisterOptions = {}) {
     const check: CheckOptions = {
       interval: '15s',
       timeout: '10s',
@@ -68,15 +69,22 @@ export class ConsulBalancer {
       check.tcp = `${this.address}:${this.options.discovery.servicePort}`
     }
 
+    if (this.options.gRPC) {
+      options.meta ??= {}
+      Object.assign(options.meta, { gRPC_port: this.options.gRPC.port })
+    }
+
+    const registerOptions = defaults(options, {
+      id: this.serviceRegisterId,
+      name: this.options.discovery.serviceName,
+      address: this.address,
+      port: this.options.discovery.servicePort,
+      tags: [this.options.discovery.serviceName],
+      check,
+    }) as Consul.Agent.Service.RegisterOptions
+
     try {
-      return await this.getConsulInstance().agent.service.register(defaults(options, {
-        id: this.serviceRegisterId,
-        name: this.options.discovery.serviceName,
-        address: this.address,
-        port: this.options.discovery.servicePort,
-        tags: [this.options.discovery.serviceName],
-        check,
-      }) as never)
+      return await this.getConsulInstance().agent.service.register(registerOptions) as never
     } catch (e) {
       console.error(`[${new Date()}] consul-balancer register ${e}`)
       throw e
@@ -88,6 +96,44 @@ export class ConsulBalancer {
     return this.getConsulInstance().agent.service.deregister(
       serviceId ?? this.serviceRegisterId
     )
+  }
+
+  /**
+   * grpc load balancer
+   * @param serviceName - name of the service | address:port
+   * @param targe - grpc client instance target
+   * @param method - grpc method name
+   * @param data - grpc request data
+   */
+  async grpc(serviceName: string, target: grpc.ServiceClientConstructor, method: string, data: unknown) {
+    let service = null
+    const [address, port] = serviceName.split(':')
+
+    if (address && port) {
+      // directly use address:port
+      service = { address, port }
+    } else {
+      // Get random healthy service
+      service = await this.getPassingServiceByRandom(serviceName)
+      if (!service) throw new Error(`${serviceName} 服务不可用`)
+      if (!service.meta?.['gRPC_port']) {
+        throw new Error('gRPC service meta not found gRPC_port')
+      }
+      service.port = +service.meta['gRPC_port']
+    }
+
+    // Create client
+    const grpcClient = new target(
+      `${service.address}:${service.port}`, 
+      grpc.credentials.createInsecure()
+    ) as any
+
+    return new Promise((ok, fail) => {
+      grpcClient[method](data, (err: Error | null, result: unknown) => {
+        if (err) return fail(err)
+        return ok(result)
+      })
+    })
   }
 
   async rest(
@@ -136,7 +182,7 @@ export class ConsulBalancer {
       passing,
     })) as Array<{
       Node: { Node: string }
-      Service: { Address: string; Port: number }
+      Service: { Address: string; Port: number; Meta: Record<string, string> }
       Checks: { ServiceName: string; Status: string }[]
     }>
 
@@ -145,6 +191,7 @@ export class ConsulBalancer {
         node: service.Node.Node,
         address: service.Service.Address,
         port: service.Service.Port,
+        meta: service.Service.Meta,
         status: '',
       }
 

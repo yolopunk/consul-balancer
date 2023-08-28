@@ -9,6 +9,9 @@ export type ConsulOptions = {
     serviceName: string
     servicePort: number
     healthCheckHTTP?: string
+  },
+  gRPC?: {
+    port: string
   }
 }
 
@@ -17,6 +20,7 @@ export type Service = {
   address: string
   port: number
   status: 'passing' | 'warning' | 'critical'
+  meta?: Record<string, string>
 }
 
 export type CheckOptions = {

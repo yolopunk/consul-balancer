@@ -2,6 +2,7 @@ npm-debug.log*
 coverage
 node_modules/
 built
+test/type
 
 .DS_Store
 .vscode

@@ -1,3 +1,6 @@
+import * as grpc from '@grpc/grpc-js'
+import * as protoLoader from '@grpc/proto-loader'
+import * as path from 'path'
 import { ConsulBalancer } from '../lib'
 
 const consulBalancer = new ConsulBalancer({
@@ -9,9 +12,12 @@ const consulBalancer = new ConsulBalancer({
     register: true,
     deregister: true,
     serviceName: 'consul-balancer',
-    servicePort: 8080,
-    healthCheckHTTP: '/healthy',
+    servicePort: 3333,
+    // healthCheckHTTP: '/healthy',
   },
+  gRPC: {
+    port: '50051'
+  }
 })
 
 it('get service info', async () => {
@@ -20,11 +26,27 @@ it('get service info', async () => {
 })
 
 it('manual register service', async () => {
-  const res = await consulBalancer.register({ id: 'manul-register1', name: 'manual-register', meta: { prefix: '/api' } })
-  console.log(res)
+  await consulBalancer.register({ id: 'manul-register1', name: 'manual-register', meta: { prefix: '/api' } })
+  const service = await consulBalancer.getPassingServiceByRandom('manual-register')
+  console.log('manual register service:', service)
 })
 
 it('load balance rest', async () => {
   const res = await consulBalancer.rest('auth-service', '/healthy')
-  console.log(res)
+  console.log('load balance rest:', res)
+})
+
+it('load balance grpc', async () => {
+  const options = {
+    keepCase: true,
+    longs: String,
+    enums: String,
+    oneofs: true
+  }
+
+  const packageDefinition = protoLoader.loadSync(path.join(__dirname, 'hello.proto'), options)
+  const { hello: { HelloService } } = grpc.loadPackageDefinition(packageDefinition) as { hello: { HelloService: grpc.ServiceClientConstructor } }
+
+  const res = await consulBalancer.grpc('grpcb.in:9000', HelloService, 'SayHello', { greeting: 'John' })
+  console.log('load balance grpc:', res)
 })
