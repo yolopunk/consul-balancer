@@ -2,7 +2,8 @@
   "extends": "@tsconfig/node-lts-strictest/tsconfig.json",
   "compilerOptions": {
     "declaration": true,
-    "outDir": "built"
+    "outDir": "built",
+    "target": "ES6"
   },
   "include": ["lib/**/*"]
 }
